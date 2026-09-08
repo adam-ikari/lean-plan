@@ -4,27 +4,19 @@
 
 Lean implementation planning for usage/per-request billed coding plans. Every request should buy progress: batch tool calls, route slices to the cheapest capable worker, plan once.
 
-## Overview
+## What it is
 
 Under per-request or usage-window billing, requests are the scarce resource. This skill cuts them without skipping work. Batching calls and picking cheap workers is how it saves; verification is never skipped, because a broken result costs more requests than the check would have.
 
-## Core principles
+## Features
 
-1. **Batch.** One assistant turn is one API request, so independent tool calls share a turn. Read many files in one turn, write many in one turn, verify in one turn.
-2. **Route cheap.** Give each slice to the cheapest worker that can do it. Default to fast workers (`sonic`, or `scout` for read-only); reasoning work stays in the main session.
-3. **Decide once.** Plan fully in one pass, no confirmation loops, one batched verification.
+- One assistant turn is one API request, so independent tool calls share a turn. Read many files in one turn, write many in one turn, verify in one turn.
+- Mechanical slices go to fast workers (`sonic`, or `scout` for read-only). Reasoning slices stay in the main session; a full subsystem that overflows the session goes to a good worker (`task`).
+- Workers have a threshold. Estimate the single-agent batched cost first; below 20 requests, do it yourself. Otherwise workers need 6+ independent file domains where each slice would cost 5+ requests in the main session.
+- Planning is one pass: full task list, file-ownership map, worker-grade assignment, verification step. No confirmation loops, one batched verification, one commit.
 
-### Worker grading
-
-| Slice | Where | Why |
-|---|---|---|
-| Mechanical: boilerplate, config, docs, copy-paste | fast worker (`sonic`; `scout` for read-only) | ~3 requests per slice, low deduction |
-| Needs judgment: logic, test interaction, argparse, edge cases | main session, do not spawn | a spawned worker costs 10+ requests plus orchestration and wait |
-| A reasoning slice too big for the main session (a full subsystem) | good worker (`task`) | only then pay for full capability |
-
-### When not to spawn workers
-
-Estimate the single-agent batched cost first. Below 20 requests, do it yourself. Spawn workers only with 6+ independent file domains where each slice would cost 5+ requests in the main session.
+> [!NOTE]
+> Workers are a cost, not a default. A spawned worker costs about 3 requests fixed plus churn risk; a misgraded reasoning slice can burn 10+.
 
 ## Installation
 
@@ -32,7 +24,18 @@ Estimate the single-agent batched cost first. Below 20 requests, do it yourself.
 git clone https://github.com/adam-ikari/lean-plan.git ~/.agents/skills/lean-plan
 ```
 
-Triggers: `coding plan`, `implementation plan`, `task breakdown`, `per-request billing`, `quota`, `5-hour window`, `save requests`, `batch calls`, `fast worker`, `good worker`.
+The skill triggers on: `coding plan`, `implementation plan`, `task breakdown`, `per-request billing`, `quota`, `5-hour window`, `save requests`, `batch calls`, `fast worker`, `good worker`.
+
+## Usage
+
+1. Plan the whole task in one response: task list, file-ownership map, worker-grade assignment, verification step. No confirmation loop.
+2. Batch every independent tool call into the same turn. Never emit a single tool call alone when siblings are ready.
+3. Spawn workers only if the threshold says they pay off. Grade each slice by difficulty, default to fast workers.
+4. Verify once over the merged result: build plus affected tests plus a smoke run, all in one turn.
+5. Commit once per domain.
+
+> [!WARNING]
+> Never skip verification to save a request. An unverified "done" costs more requests later.
 
 ## Benchmark data
 
