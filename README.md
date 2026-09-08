@@ -2,11 +2,11 @@
 
 [中文版 Chinese version](README_CN.md)
 
-Lean implementation planning for usage/per-request billed coding plans. Every request should buy progress: batch tool calls, route slices to the cheapest capable worker, plan once.
+Lean implementation planning for usage/per-request billed coding plans. Fewer requests, same work.
 
 ## What it is
 
-Under per-request or usage-window billing, requests are the scarce resource. This skill cuts them without skipping work. Batching calls and picking cheap workers is how it saves; verification is never skipped, because a broken result costs more requests than the check would have.
+Under per-request or usage-window billing, requests are the scarce resource. This skill reduces them without skipping work. Batching calls and picking cheap workers is how it saves; verification is never skipped, because a broken result costs more requests than the check would have.
 
 ## Features
 
@@ -20,8 +20,29 @@ Under per-request or usage-window billing, requests are the scarce resource. Thi
 
 ## Installation
 
+Recommended: install for all agents with the skills CLI.
+
 ```bash
-git clone https://github.com/adam-ikari/lean-plan.git ~/.agents/skills/lean-plan
+npx skills add adam-ikari/lean-plan -g -y
+```
+
+The CLI writes to `~/.agents/skills` (universal) and symlinks into each agent's skills directory. Pass `-a '*'` to force all agents, or `-a <agent>` for a single one.
+
+Manual install per agent, clone into the agent's skills directory:
+
+| Agent | Directory |
+|---|---|
+| Claude Code | `~/.claude/skills/lean-plan` |
+| Codex | `~/.codex/skills/lean-plan` |
+| Cursor | `~/.cursor/skills/lean-plan` |
+| Gemini CLI | `~/.gemini/skills/lean-plan` |
+| Kilo Code | `~/.kilocode/skills/lean-plan` |
+| Roo Code | `~/.roo/skills/lean-plan` |
+| Windsurf | `~/.windsurf/skills/lean-plan` |
+| Amp, Antigravity, Cline, OpenCode, Warp, others | `~/.agents/skills/lean-plan` |
+
+```bash
+git clone https://github.com/adam-ikari/lean-plan.git ~/.claude/skills/lean-plan
 ```
 
 The skill triggers on: `coding plan`, `implementation plan`, `task breakdown`, `per-request billing`, `quota`, `5-hour window`, `save requests`, `batch calls`, `fast worker`, `good worker`.

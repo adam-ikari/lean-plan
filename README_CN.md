@@ -2,7 +2,7 @@
 
 [English version](README.md)
 
-面向按次 / 用量计费编码计划的精简实现规划技能。让每个请求都买到进展：批量合并工具调用，把切片交给最便宜的 worker，计划一次成型。
+面向按次 / 用量计费编码计划的精简实现规划技能。少花请求，不砍工作。
 
 ## 是什么
 
@@ -20,8 +20,29 @@
 
 ## 安装
 
+推荐用 skills CLI 一次装到所有 agent：
+
 ```bash
-git clone https://github.com/adam-ikari/lean-plan.git ~/.agents/skills/lean-plan
+npx skills add adam-ikari/lean-plan -g -y
+```
+
+CLI 会写入 `~/.agents/skills`（通用目录）并 symlink 到各 agent 的 skills 目录。加 `-a '*'` 强制装到全部 agent，或 `-a <agent>` 只装一个。
+
+按 agent 手动安装，clone 到对应目录：
+
+| Agent | 目录 |
+|---|---|
+| Claude Code | `~/.claude/skills/lean-plan` |
+| Codex | `~/.codex/skills/lean-plan` |
+| Cursor | `~/.cursor/skills/lean-plan` |
+| Gemini CLI | `~/.gemini/skills/lean-plan` |
+| Kilo Code | `~/.kilocode/skills/lean-plan` |
+| Roo Code | `~/.roo/skills/lean-plan` |
+| Windsurf | `~/.windsurf/skills/lean-plan` |
+| Amp、Antigravity、Cline、OpenCode、Warp 等 | `~/.agents/skills/lean-plan` |
+
+```bash
+git clone https://github.com/adam-ikari/lean-plan.git ~/.claude/skills/lean-plan
 ```
 
 触发词：`coding plan`、`implementation plan`、`task breakdown`、`多步实现`、`按次计费`、`省调用`、`调用次数`、`合并调用`、`批量调用`、`减少调用`、`限额`、`配额`、`fast worker`、`good worker`、`抵扣系数`。
