@@ -1,0 +1,128 @@
+---
+name: lean-plan
+description: |
+  Lean implementation planning built for usage/per-request billed coding plans
+  (5-hour windows like Claude Pro/Max, per-request billing, quota plans). Use
+  whenever a task needs a coding plan, multi-step implementation, or task
+  breakdown. Minimize billed requests by batching tool calls into single API
+  requests and routing each slice to the cheapest capable worker; never skip
+  work or verification to save a request. Works standalone, or supplements
+  heavier planning skills when the user explicitly wants a full written plan
+  document. Triggers: coding plan, implementation plan, task breakdown,
+  multi-step implementation, 按次计费, 按次数计费, 用量计费, 省钱, 省调用,
+  调用次数, 合并调用, 批量调用, 减少调用, 限额, 配额, 5-hour window,
+  usage-based billing, quota, fast worker, good worker, 抵扣系数.
+---
+
+# Lean Plan
+
+Plan and execute coding work so billed requests buy progress. The scarce
+resource is **requests** (per-request billing, quota/usage windows): finish
+the work with the fewest requests, but **never skip work or verification to
+save one** — a broken result costs more requests later.
+
+Three levers, in priority order:
+1. **Batch** — one assistant turn = one API request. Put every independent
+   tool call in the same turn. This is the biggest lever.
+2. **Route cheap** — assign each slice to the cheapest worker that can do it.
+   Default to fast workers.
+3. **Decide once** — plan fully in one pass; no confirmation loops; one
+   batched verification.
+
+## 0. When NOT to use this skill
+
+- User asked for a detailed written plan document or iterative confirmation.
+- Task is trivially small (single file, single step) — batching still helps,
+  but skip the worker machinery entirely.
+- User is exploring/experimenting and expects back-and-forth dialogue.
+- High-risk changes (production data migration, security-sensitive code) need
+  staged review.
+
+When in doubt, default to lean-plan.
+
+## 1. Planning — one pass, no confirmation loop
+
+- Entire plan in ONE response: task list + file-ownership map +
+  worker-grade assignment + verification step. No "does this look right"
+  stops between sections.
+- No separate plan document unless the user asked for one. The todo list +
+  this message IS the plan.
+- Adjust only if a hard error surfaces during execution.
+
+## 2. When to ask vs. decide (the decision ladder)
+
+Ask ONLY when a choice is (a) materially different tradeoffs the user must
+weigh AND (b) not resolvable from repo conventions/docs/history. If you must
+ask, ask ALL questions in ONE `ask` call — never one at a time.
+
+Defaults (pick the most conservative standard option, do NOT bounce back):
+- Ambiguous requirement → read code/docs; match existing patterns.
+- Multiple designs → simplest that satisfies behavior; reuse existing code.
+- New dependency → refused; stdlib / installed / vendored.
+- Abstraction/extra layer → YAGNI.
+- Error handling → root cause fix, never suppress/special-case.
+- Docs → update only affected existing docs; no new doc files unless asked.
+
+## 3. Execution
+
+### 3.1 Batch tool calls — one turn = one API request (the #1 lever)
+
+Every assistant turn you emit is ONE billed request, no matter how many tool
+calls it carries. **Put every independent tool call in the same turn.**
+
+- **Reads:** all files you need now get read in ONE turn. Reading 10 files
+### 3.2 Worker grading — route cheap, prefer fast workers
+
+Workers are a cost, not a default. Each worker costs ~3 requests fixed
+(spawn + write + self-verify) plus churn risk; the main session also pays
+orchestration + wait time. Spawn ONLY when the win is provable.
+
+**Threshold — do the arithmetic first:** estimate the single-agent batched
+cost. If it is below ~20 requests, do it yourself with batching — NO workers.
+Spawn workers only when ALL hold:
+- ≥6 genuinely independent file domains, AND
+- each slice is large enough that its ~3-request worker fixed cost amortizes
+  (it would cost ≥5 requests done in the main session), AND
+- the slices are truly independent (disjoint files, contracts stated).
+
+**Grading:**
+
+| Slice difficulty | Where it runs | Why |
+|---|---|---|
+| Truly mechanical: boilerplate, config/data, docs, copy-paste edits | **fast worker** (`sonic`; `scout` for read-only) | Cheap (~3 requests), low deduction coefficient. |
+| Needs judgment: logic, tests interacting with code, argparse wiring, edge cases | **main session, batched — do NOT spawn** | A spawned good worker costs ~10+ requests + orchestration + wait; main can do it batched for the same cost with zero overhead. |
+| A reasoning slice so big the main session can't absorb it (a full subsystem) | **good worker** (`task`) | Only then pay for full capability. |
+
+- **When in doubt, keep it in the main session.** Do NOT spawn a good worker
+  for a slice the main session could batch. Do NOT send a reasoning slice to
+  a fast worker — it will fail or churn, costing more than doing it in main.
+- Merge trivial slices into one worker rather than spawning one per file.
+- Each worker task is self-contained in ONE message: Target (exact
+  files/symbols, explicit non-goals) + Change (step-by-step) + Acceptance
+  (observable result). State the shared contracts in the batch context;
+  workers never negotiate them.
+- One worker = one file-ownership domain. Never two workers on the same file.
+
+
+### 3.3 Worker resilience (flaky/throttled upstreams)
+
+- Workers never commit; the main session commits.
+- If a worker hits rate limits/throttle (402/429): stop immediately, report
+  current state, end the turn. No spinning retries.
+- Worker state report (when stopping early): completed files, owned-file
+  list, in-flight change, blocker, contracts respected.
+
+## 4. Verification — one batched pass, never zero
+
+- Each worker verifies its own slice (compile/run) before reporting back.
+- Main session runs ONE batched verification over the merged result — build +
+  affected tests + smoke, all tool calls in one turn. Never split it into
+  serial re-checks.
+- Never skip verification to save a request. An unverified "done" costs more
+  requests later.
+
+## 5. Commit — main session only
+
+- Workers never commit. Main session groups changes by domain and commits
+  once per domain.
+- Commit message reflects what actually changed; no filler.
