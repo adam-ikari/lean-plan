@@ -71,6 +71,20 @@ Every assistant turn you emit is ONE billed request, no matter how many tool
 calls it carries. **Put every independent tool call in the same turn.**
 
 - **Reads:** all files you need now get read in ONE turn. Reading 10 files
+  in one turn costs one request; reading them in ten turns costs ten.
+- **Truncated reads:** if a read returns a summary whose footer names
+  missing ranges, re-issue ALL those ranges as parallel reads in the SAME
+  turn. Serial page-by-page fetching is one wasted request per page.
+- **Probes:** environment checks (interpreter version, git state, tool
+  availability) join the first reads turn, never their own turns.
+- **Writes:** independent file writes/edits go in ONE turn.
+- **Verification:** build + affected tests + smoke in ONE turn (one bash,
+  `&&`-joined). Never pytest in one turn and smoke in the next.
+- **Fixes:** one failure costs exactly two turns — ALL edits for the defect
+  batched in one turn, then ONE re-verify turn. Never edit → verify →
+  edit → verify.
+- **Questions:** every clarification in a single `ask` call (§2).
+
 ### 3.2 Worker grading — route cheap, prefer fast workers
 
 Workers are a cost, not a default. Each worker costs ~3 requests fixed
