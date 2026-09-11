@@ -145,9 +145,11 @@ Spawn workers only when ALL hold:
 ## 6. Cache-preserving execution
 
 Prompt cache reuses the stable prefix: system prompt + history up to the last
-turn. Every request in a stable session pays only for the delta, so cache hit
-rate is the second lever behind batching (measured 73% for a clean
-single-session run vs 30% for a run with churn). Preserve the prefix:
+turn. Every request in a stable session pays only for the delta (measured 83%
+cache hits for a clean single-session run vs 30% for one with churn). Hit
+rate is a byproduct of turn count — more turns mean a longer cached prefix —
+so never add turns to raise it. Batching (§3.1) stays the #1 lever; these
+rules cost zero extra requests. Preserve the prefix:
 
 - **One session per task, run to completion.** Never compact, /clear, or hand
   off mid-task — each reset re-sends the whole context cold (0% reuse).
@@ -160,6 +162,10 @@ single-session run vs 30% for a run with churn). Preserve the prefix:
 - **Read once, in order.** Fetch spec/context early, batched (§3.1), and do
   not re-read the same file later unless it changed. Identical reads ride the
   cache; changed tool results are normal appends.
+- **Workers get context from the task text, not by reading.** Subagent reads
+  of long files truncate and force serial re-reads — each pays fresh input (a
+  run re-read a 165-line skill across 4 turns). Embed needed content in the
+  worker prompt; workers never re-fetch long docs.
 - **Keep volatile data in tool results, not in your plan text.** Timestamps,
   git status, env snapshots go at the end of the turn. Content your later
   turns repeat must be stable or the prefix breaks.
