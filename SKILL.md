@@ -72,9 +72,10 @@ calls it carries. **Put every independent tool call in the same turn.**
 
 - **Reads:** all files you need now get read in ONE turn. Reading 10 files
   in one turn costs one request; reading them in ten turns costs ten.
-- **Truncated reads:** if a read returns a summary whose footer names
-  missing ranges, re-issue ALL those ranges as parallel reads in the SAME
-  turn. Serial page-by-page fetching is one wasted request per page.
+- **Full-doc reads use a range selector** (`file.md:1-200`): a bare `read`
+  returns a structural summary, and each follow-up page fetch it forces costs
+  one wasted request. If a read still comes back truncated, fetch ALL
+  missing ranges in the SAME turn, never serially.
 - **Probes:** environment checks (interpreter version, git state, tool
   availability) join the first reads turn, never their own turns.
 - **Writes:** independent file writes/edits go in ONE turn.
