@@ -14,9 +14,11 @@ Under per-request or usage-window billing, requests are the scarce resource. Thi
 - Mechanical slices go to fast workers (`sonic`, or `scout` for read-only). Reasoning slices stay in the main session; a full subsystem that overflows the session goes to a good worker (`task`).
 - Workers have a threshold. Estimate the single-agent batched cost first; below 20 requests, do it yourself. Otherwise workers need 6+ independent file domains where each slice would cost 5+ requests in the main session.
 - Planning is one pass: full task list, file-ownership map, worker-grade assignment, verification step. No confirmation loops, one batched verification, one commit.
+- Prompt cache stays warm. One session per task, a fixed tool set, and few workers keep the cached prefix intact, so later requests pay mostly for the delta. Measured hit rate ranged from 30% on a churny run to 73% on a clean single-session run.
 
 > [!NOTE]
 > Workers are a cost, not a default. A spawned worker costs about 3 requests fixed plus churn risk; a misgraded reasoning slice can burn 10+.
+
 
 ## Installation
 
@@ -77,6 +79,7 @@ Same task, same model, isolated workspaces in parallel. The only difference was 
 | tokens | 325,363 | 311,204 |
 
 ### Findings
+- Cache hits follow the same rules. A clean single-session run reached 73% cache reads, worker-heavy or churny runs fell to 30 to 57%. Fewer sessions, no mid-task tool changes, fewer workers, and no re-reads all keep the prefix warm.
 
 - Batching is where most of the saving comes from. Task A went from 20 requests to 9 (-55%) with tokens roughly halved; Task B from 15 to 10 (-33%). Writing seven files in one turn counts as one request.
 - Fast workers are genuinely cheaper. A mechanical slice costs sonic about 3 requests; a reasoning slice costs task 13. That is why reasoning slices stay in the main session.

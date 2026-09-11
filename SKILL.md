@@ -126,3 +126,25 @@ Spawn workers only when ALL hold:
 - Workers never commit. Main session groups changes by domain and commits
   once per domain.
 - Commit message reflects what actually changed; no filler.
+
+## 6. Cache-preserving execution
+
+Prompt cache reuses the stable prefix: system prompt + history up to the last
+turn. Every request in a stable session pays only for the delta, so cache hit
+rate is the second lever behind batching (measured 73% for a clean
+single-session run vs 30% for a run with churn). Preserve the prefix:
+
+- **One session per task, run to completion.** Never compact, /clear, or hand
+  off mid-task — each reset re-sends the whole context cold (0% reuse).
+- **Freeze the tool surface.** Do not mount/unmount MCP servers, load/unload
+  skills, or start/stop LSP between turns. Tool schemas are part of the
+  prefix; any change invalidates it.
+- **Fewer workers = more cache.** A spawned worker starts a fresh context
+  with zero reusable prefix. This reinforces the §3.2 threshold: below ~20
+  requests, single-session batching both saves requests and keeps hits high.
+- **Read once, in order.** Fetch spec/context early, batched (§3.1), and do
+  not re-read the same file later unless it changed. Identical reads ride the
+  cache; changed tool results are normal appends.
+- **Keep volatile data in tool results, not in your plan text.** Timestamps,
+  git status, env snapshots go at the end of the turn. Content your later
+  turns repeat must be stable or the prefix breaks.
