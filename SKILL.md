@@ -78,7 +78,9 @@ calls it carries. **Put every independent tool call in the same turn.**
   missing ranges in the SAME turn, never serially.
 - **Probes:** environment checks (interpreter version, git state, tool
   availability) join the first reads turn, never their own turns.
-- **Writes:** independent file writes/edits go in ONE turn.
+- **Writes:** independent file writes/edits go in ONE turn. Paths are
+  absolute (relative paths fail). A batch counts only after every tool
+  result confirms success — never report files as written on a failed call.
 - **Verification:** build + affected tests + smoke in ONE turn (one bash,
   `&&`-joined). Never pytest in one turn and smoke in the next.
 - **Fixes:** one failure costs exactly two turns — ALL edits for the defect
@@ -141,6 +143,9 @@ Spawn workers only when ALL hold:
 - Workers never commit. Main session groups changes by domain and commits
   once per domain.
 - Commit message reflects what actually changed; no filler.
+- Before `git add -A`, ensure `.gitignore` covers build artifacts
+  (`__pycache__/`, `*.pyc`); a repo without one needs explicit paths. A
+  polluted commit costs two extra cleanup rounds (measured).
 
 ## 6. Cache-preserving execution
 

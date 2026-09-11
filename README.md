@@ -85,6 +85,7 @@ Same task, same model, isolated workspaces in parallel. The only difference was 
 - Fast workers are genuinely cheaper. A mechanical slice costs sonic about 3 requests; a reasoning slice costs task 13. That is why reasoning slices stay in the main session.
 - The threshold matters. On Task B the first version spawned 4 workers for 39 requests, worse than the 15 of the natural run. After tuning (below ~20 requests means no workers) it correctly skipped workers and finished in 10.
 - Agents underestimate their own request counts. One said 8 and used 9, another said 7 and used 10, but the measured data confirms the reduction.
+- The rules hold across scenarios. With the full context embedded in the task and zero document reads, a 7-file green-field build took 4 requests (effective cost 80K), a 12-file multi-module build took 9 (190K, best ever for that task), and a bug-fix run on a seeded-broken repo took 7 (89K) while keeping the fix discipline: all edits for the defects in one turn, one re-verify turn. Two new defects surfaced and got fixed in the skill: relative edit paths fail (use absolute), and `git add -A` on a repo without `.gitignore` pollutes the commit.
 
 ### How it was measured
 
